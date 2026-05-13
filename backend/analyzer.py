@@ -11,25 +11,50 @@ class IngredientAnalyzer:
     
     def classify_ingredients(self, ingredients_text):
         """Classify ingredients into safe/moderate/harmful categories"""
-        if not ingredients_text:
+        ingredients = self.parse_ingredients(ingredients_text)
+        if not ingredients:
             return {"safe": 0, "moderate": 0, "harmful": 0}
-        
-        ingredients = [ing.lower().strip() for ing in ingredients_text.split(',')]
+
+        ingredient_details = self.classify_ingredient_details(ingredients)
+        return {
+            "safe": len(ingredient_details["safe"]),
+            "moderate": len(ingredient_details["moderate"]),
+            "harmful": len(ingredient_details["harmful"])
+        }
+
+    def parse_ingredients(self, ingredients_text):
+        """Split ingredient text from labels into readable ingredient names."""
+        if not ingredients_text:
+            return []
+
+        cleaned = re.sub(r'[_*]', ' ', str(ingredients_text))
+        cleaned = re.sub(r'\s+', ' ', cleaned).strip()
+        parts = re.split(r'[,;•]|\.(?=\s+[A-Z])|\n+', cleaned)
+
+        return [
+            re.sub(r'\s+', ' ', part).strip(' :-')
+            for part in parts
+            if re.sub(r'\s+', ' ', part).strip(' :-')
+        ]
+
+    def classify_ingredient_details(self, ingredients):
+        """Return ingredient names grouped by safety class."""
         harmful_list = self.harmful_data['harmful']
         warning_list = self.harmful_data['warnings']
-        
-        harmful_count = sum(1 for ing in ingredients if any(h in ing for h in harmful_list))
-        warning_count = sum(1 for ing in ingredients if any(w in ing for w in warning_list))
-        total_ingredients = len(ingredients)
-        
-        safe = total_ingredients - harmful_count - warning_count
-        moderate = warning_count
-        
-        return {
-            "safe": max(0, safe),
-            "moderate": moderate,
-            "harmful": harmful_count
-        }
+        sugar_list = self.harmful_data.get('sugar_keywords', [])
+
+        details = {"safe": [], "moderate": [], "harmful": []}
+        for ingredient in ingredients:
+            lower = ingredient.lower()
+            has_palm_oil = 'palm' in lower and 'oil' in lower
+            if any(harmful in lower for harmful in harmful_list) or has_palm_oil:
+                details["harmful"].append(ingredient)
+            elif any(warning in lower for warning in warning_list) or any(sugar in lower for sugar in sugar_list):
+                details["moderate"].append(ingredient)
+            else:
+                details["safe"].append(ingredient)
+
+        return details
     
     def detect_warnings(self, ingredients_text):
         """Detect specific warnings like sugar, allergens, etc."""
