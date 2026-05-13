@@ -1,0 +1,13 @@
+{
+  "harmful": [
+    "palm oil", "hydrogenated oil", "partially hydrogenated oil",
+    "high fructose corn syrup", "sucralose", "aspartame", "saccharin",
+    "tartrazine", "sunset yellow", "carmine", "sodium benzoate",
+    "potassium sorbate", "tbhq", "bha", "bht"
+  ],
+  "warnings": [
+    "milk", "lactose", "whey", "casein", "gluten", "wheat",
+    "peanut", "nuts", "soy", "egg", "fish", "shellfish"
+  ],
+  "sugar_keywords": ["sugar", "sucrose", "dextrose", "maltose", "fructose"]
+}

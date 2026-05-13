@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Barcodify+ - Smart Product Analysis</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/@zxing/library@latest/umd/index.min.css">
+</head>
+<body>
+    <!-- Flower Animation Background -->
+    <div class="flowers-container" aria-hidden="true">
+        <div class="flower flower-1">🌸</div>
+        <div class="flower flower-2">🌺</div>
+        <div class="flower flower-3">🌷</div>
+        <div class="flower flower-4">🌹</div>
+        <div class="flower flower-5">🌻</div>
+        <div class="flower flower-6">💐</div>
+        <div class="flower flower-7">🌸</div>
+        <div class="flower flower-8">🌺</div>
+        <div class="flower flower-9">🌷</div>
+        <div class="flower flower-10">🌹</div>
+    </div>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>Barcodify<span>+</span></h2>
+            </div>
+            <div class="nav-links">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#how" class="nav-link">How It Works</a>
+                <a href="#about" class="nav-link">About Us</a>
+            </div>
+            <div class="nav-actions" aria-label="Account notifications">
+                <button class="nav-icon-btn" type="button" aria-label="Profile">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M20 21a8 8 0 0 0-16 0" />
+                        <circle cx="12" cy="7" r="4" />
+                    </svg>
+                </button>
+                <button class="nav-icon-btn nav-icon-btn--alert" type="button" aria-label="Notifications">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                        <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section (Centered, text-only) -->
+    <section class="hero" id="home">
+        <div class="container hero-inner">
+            <div class="hero-glass-card hero-glass-card--centered" aria-label="Hero content">
+                <h1 class="hero-title">Barcodify<span>+</span></h1>
+                <p class="hero-subtitle">Label Padhega India Aage Badhega India</p>
+
+                <div class="hero-actions" role="group" aria-label="Hero actions">
+                    <button class="btn btn-primary" onclick="startScanner()">
+                        <span class="scan-icon" aria-hidden="true"></span>
+                        Scan Barcode
+                    </button>
+                    <button class="btn btn-secondary" id="manualEntryBtn" type="button">Manual Entry</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- How it Works (anchors from navbar) -->
+    <section id="how" class="how-section">
+        <div class="container how-inner">
+            <div class="how-head">
+                <h2>How it Works</h2>
+                <p>Scan a barcode or enter it manually to get a nutrition-grade breakdown and smarter alternatives.</p>
+            </div>
+            <div class="how-grid">
+                <div class="how-step">
+                    <div class="step-num">1</div>
+                    <h3>Scan</h3>
+                    <p>Point your camera at a product barcode.</p>
+                </div>
+                <div class="how-step">
+                    <div class="step-num">2</div>
+                    <h3>Analyze</h3>
+                    <p>Get nutrient insights and warning signals.</p>
+                </div>
+                <div class="how-step">
+                    <div class="step-num">3</div>
+                    <h3>Choose Better</h3>
+                    <p>Discover healthier options for your needs.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- About (anchors from navbar) -->
+    <section id="about" class="about-section">
+        <div class="container about-inner">
+            <div class="about-left">
+                <h2>About Barcodeify</h2>
+                <p>
+                    Barcodeify is a smart nutrition advisor that helps you understand what you eat—fast.
+                    Built for everyday shoppers and hackathon demos alike.
+                </p>
+                <ul class="about-list">
+                    <li>Clear nutrition grading (A–E)</li>
+                    <li>Ingredient warnings when relevant</li>
+                    <li>Alternative suggestions for better choices</li>
+                </ul>
+            </div>
+            <div class="about-right" aria-hidden="true">
+                <div class="about-stat">
+                    <div class="about-stat-value">Fast</div>
+                    <div class="about-stat-label">Instant results</div>
+                </div>
+                <div class="about-stat">
+                    <div class="about-stat-value">Friendly</div>
+                    <div class="about-stat-label">Easy-to-read UI</div>
+                </div>
+                <div class="about-stat">
+                    <div class="about-stat-value">Useful</div>
+                    <div class="about-stat-label">Recommendations included</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scanner Preview Section -->
+    <section id="scanner" class="scanner-preview-section hidden">
+        <div class="container">
+            <div class="scanner-preview-card">
+                <div class="scanner-header">
+                    <h2>Ready to Scan</h2>
+                    <p>Point your camera at any product barcode</p>
+                </div>
+
+                <div class="scanner-container">
+                    <div class="scanner-header">
+                        <h2>Scan Product Barcode</h2>
+                        <button class="close-btn" onclick="toggleScanner()">✕</button>
+                    </div>
+
+                    <!-- ZXing Scanner -->
+                    <div id="scanner-container" class="scanner-box">
+                        <video id="scanner-video" autoplay muted playsinline></video>
+                        <div class="scanner-overlay">
+                            <div class="scan-line"></div>
+                            <p>Align barcode within frame</p>
+                        </div>
+                    </div>
+
+                    <!-- Manual Input -->
+                    <div class="manual-input">
+                        <input type="text" id="manual-barcode" placeholder="Or enter barcode manually..." maxlength="20">
+                        <button onclick="searchManualBarcode()">Search</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section id="results" class="results-section hidden">
+        <div class="container">
+            <div class="result-card">
+                <div class="product-header">
+                    <img id="product-image" src="" alt="Product" class="product-img">
+                    <div class="product-info">
+                        <h2 id="product-name">Product Name</h2>
+                        <p id="product-brand" class="brand">Brand</p>
+                        <div class="health-score" id="health-score">
+                            <span id="score-number">0</span>/10
+                            <div class="score-fill" id="score-fill"></div>
+                        </div>
+                        <span id="product-status" class="status-badge">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Warnings -->
+                <div class="warnings-section" id="warnings-section">
+                    <h3>⚠️ Warnings</h3>
+                    <div id="warnings-list" class="warnings-list"></div>
+                </div>
+
+                <!-- Ingredient Analysis -->
+                <div class="analysis-grid">
+                    <div class="analysis-card">
+                        <h4>Ingredients Analysis</h4>
+                        <div class="ingredient-breakdown" id="ingredient-breakdown">
+                            <!-- Dynamic content -->
+                        </div>
+                    </div>
+                    <div class="analysis-card">
+                        <h4>Nutrition Grade</h4>
+                        <div id="nutrition-grade" class="nutrition-grade">Unknown</div>
+                    </div>
+                </div>
+
+                <!-- Nutritional Details -->
+                <div class="analysis-card">
+                    <h4>Nutritional Information (per 100g)</h4>
+                    <div class="nutrition-details" id="nutrition-details">
+                        <div class="nutrition-chart-wrap">
+                            <canvas id="nutrition-chart" width="240" height="240" aria-label="Nutrition chart" role="img"></canvas>
+                        </div>
+
+                        <div class="nutrition-legend">
+                            <p><strong>Proteins:</strong> <span id="proteins">Loading...</span></p>
+                            <p><strong>Carbohydrates:</strong> <span id="carbohydrates">Loading...</span></p>
+                            <p><strong>Fats:</strong> <span id="fats">Loading...</span></p>
+                            <p><strong>Energy:</strong> <span id="energy">Loading...</span> kcal</p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Additional Product Information -->
+                <div class="analysis-card">
+                    <h4>Product Details</h4>
+                    <div class="product-details" id="product-details">
+                        <p><strong>Category:</strong> <span id="category">Loading...</span></p>
+                        <p><strong>Serving Size:</strong> <span id="serving-size">Loading...</span></p>
+                        <p><strong>Allergens:</strong> <span id="allergens">Loading...</span></p>
+                        <p><strong>Barcode:</strong> <span id="barcode">Loading...</span></p>
+                    </div>
+                </div>
+
+                <!-- Alternatives -->
+                <div class="alternatives-section">
+                    <h3>🥗 Healthier Alternatives</h3>
+                    <div id="alternatives-list" class="alternatives-grid"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- History Section -->
+    <section id="history" class="history-section">
+        <div class="container">
+            <h2>Recent Scans</h2>
+            <div id="history-list" class="history-grid"></div>
+        </div>
+    </section>
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p>Analyzing product...</p>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="error-modal" class="modal hidden">
+        <div class="modal-content">
+            <h3>Oops!</h3>
+            <p id="error-message"></p>
+            <button onclick="closeErrorModal()">Try Again</button>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+    <script src="scanner.js"></script>
+    <script src="nutritionChart.js"></script>
+    <script src="app.js"></script>
+
+
+    <script>
+        // Keep existing scanner/results/history logic unchanged.
+        // Hero micro-interaction: Manual Entry button opens scanner panel and focuses the input.
+        document.addEventListener('DOMContentLoaded', () => {
+            const manualBtn = document.getElementById('manualEntryBtn');
+            const barcodeInput = document.getElementById('manual-barcode');
+
+            if (manualBtn && barcodeInput) {
+                manualBtn.addEventListener('click', () => {
+                    const scannerSection = document.getElementById('scanner');
+                    if (scannerSection && scannerSection.classList.contains('hidden')) {
+                        toggleScanner();
+                    }
+                    scannerSection?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    setTimeout(() => barcodeInput.focus(), 250);
+                });
+            }
+        });
+    </script>
+
+</body>
+</html>
