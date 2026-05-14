@@ -1653,7 +1653,19 @@ body {
     height: 18px;
     justify-self: end;
     color: #071b2d;
+    transition: transform 160ms ease;
 }
+
+/* Rotate drop arrow when the row is expanded */
+.ingredient-analysis-row[aria-expanded="true"] svg {
+    transform: rotate(180deg);
+}
+
+/* Improve click affordance */
+.ingredient-analysis-row {
+    user-select: none;
+}
+
 
 .analysis-icon {
     width: 24px;

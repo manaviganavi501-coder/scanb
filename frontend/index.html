@@ -4,7 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Barcodify+ - Smart Product Analysis</title>
-    <link rel="stylesheet" href="style.css?v=20260513-ingredients-images">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="chatbot.css">
+    <link rel="stylesheet" href="chatbot_icon.css">
+
+
+
+
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/@zxing/library@latest/umd/index.min.css">
 </head>
@@ -274,7 +280,7 @@
                     <article class="result-card alternatives-section">
                         <div class="alternatives-heading">
                             <h3>Better Alternatives</h3>
-                            <button type="button" id="view-all-alternatives" class="hidden" onclick="toggleAlternativesView()">View All</button>
+                            <button type="button">View All</button>
                         </div>
                         <div id="alternatives-list" class="alternatives-grid"></div>
                     </article>
@@ -293,7 +299,7 @@
         </div>
     </section>
 
-    <!-- Loading Overlay -->
+
     <div id="loading-overlay" class="loading-overlay hidden">
         <div class="spinner"></div>
         <p>Analyzing product...</p>
@@ -310,8 +316,10 @@
 
     <!-- Alternative Product Detail Modal -->
     <div id="alternative-modal" class="alternative-modal hidden" role="dialog" aria-modal="true" aria-labelledby="alternative-modal-title">
+
         <div class="alternative-modal-content">
             <button class="alternative-modal-close" type="button" onclick="closeAlternativeModal()" aria-label="Close product details">
+
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                     <path d="M18 6 6 18" />
                     <path d="m6 6 12 12" />
@@ -323,12 +331,19 @@
 
     <!-- Scripts -->
     <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
-    <script src="scanner.js?v=20260513-ingredients-images"></script>
-    <script src="nutritionChart.js?v=20260513-ingredients-images"></script>
-    <script src="app.js?v=20260513-ingredients-images"></script>
+    <script src="scanner.js"></script>
+    <script src="nutritionChart.js"></script>
+    <script src="chatbot_ui.js"></script>
+    <script src="chatbot_fab.js"></script>
+    <script src="app.js"></script>
+
+
+
+
 
 
     <script>
+
         // Keep existing scanner/results/history logic unchanged.
         // Hero micro-interaction: Manual Entry button opens scanner panel and focuses the input.
         document.addEventListener('DOMContentLoaded', () => {

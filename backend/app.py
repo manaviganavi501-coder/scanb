@@ -9,6 +9,10 @@ from analyzer import IngredientAnalyzer
 from datetime import datetime
 import os
 
+from chatbot import get_local_response
+from llm_router import llama3_cloud_chat
+
+
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
@@ -348,12 +352,19 @@ def get_fallback_ingredients(name, category_text=''):
     return 'Whole food ingredients, grains, nuts, seeds, natural seasoning'
 
 def get_fallback_alternatives(category_query, product_context=''):
-    """Return relevant local suggestions when live alternatives are unavailable."""
+    """Return relevant local suggestions when live alternatives are unavailable.
+
+    To avoid showing the same alternatives for every product, we try to
+    specialize the fallback choice using BOTH the chosen category and the
+    scanned product context (name/brand/ingredients).
+    """
     category_text = (category_query or '').lower()
     context_text = f"{category_text} {(product_context or '').lower()}"
+
+    # Match groups using broader category terms.
     fallback_groups = [
         (
-            ('noodle', 'instant-noodle', 'instant noodle', 'maggi', 'ramen'),
+            ('noodle', 'instant-noodle', 'instant noodle', 'maggi', 'ramen', 'udon'),
             [
                 ("24 Mantra Organic Noodles", "24 Mantra", "A", 8.5),
                 ("Slurrp Farm Millet Noodles", "Slurrp Farm", "A", 8.2),
@@ -361,7 +372,7 @@ def get_fallback_alternatives(category_query, product_context=''):
             ]
         ),
         (
-            ('pasta', 'macaroni', 'spaghetti'),
+            ('pasta', 'macaroni', 'spaghetti', 'penne', 'fusilli'),
             [
                 ("Whole Wheat Pasta", "Organic Tattva", "A", 8.6),
                 ("Millet Macaroni", "Slurrp Farm", "A", 8.1),
@@ -393,7 +404,7 @@ def get_fallback_alternatives(category_query, product_context=''):
             ]
         ),
         (
-            ('cereal', 'corn flakes', 'muesli', 'granola', 'breakfast'),
+            ('cereal', 'corn flakes', 'muesli', 'muesli', 'granola', 'breakfast', 'oats', 'oat'),
             [
                 ("No Added Sugar Muesli", "True Elements", "A", 8.6),
                 ("Ragi Flakes", "Soulfull", "A", 8.0),
@@ -401,7 +412,7 @@ def get_fallback_alternatives(category_query, product_context=''):
             ]
         ),
         (
-            ('beverage', 'drink', 'juice', 'soda', 'cola', 'soft drink'),
+            ('beverage', 'drink', 'juice', 'soda', 'cola', 'soft drink', 'water', 'lassi'),
             [
                 ("Unsweetened Lemon Water", "Fresh Choice", "A", 9.0),
                 ("Coconut Water", "Natural Hydrate", "A", 8.5),
@@ -409,7 +420,7 @@ def get_fallback_alternatives(category_query, product_context=''):
             ]
         ),
         (
-            ('milk', 'yogurt', 'curd', 'dairy', 'lassi'),
+            ('milk', 'yogurt', 'curd', 'dairy', 'lassi', 'kefir'),
             [
                 ("Plain Greek Yogurt", "Protein Dairy", "A", 8.4),
                 ("Unsweetened Curd", "Fresh Dairy", "A", 8.1),
@@ -417,7 +428,7 @@ def get_fallback_alternatives(category_query, product_context=''):
             ]
         ),
         (
-            ('sauce', 'ketchup', 'spread', 'jam', 'mayonnaise'),
+            ('sauce', 'ketchup', 'spread', 'jam', 'mayonnaise', 'mayo', 'marmalade'),
             [
                 ("Organic Tomato Sauce", "Organic Brand", "A", 9.0),
                 ("Natural Ketchup", "Healthy Choice", "B", 8.0),
@@ -425,7 +436,7 @@ def get_fallback_alternatives(category_query, product_context=''):
             ]
         ),
         (
-            ('sweet', 'snack', 'bar'),
+            ('bar', 'snack bar', 'energy bar', 'sweet', 'chikki', 'bar'),
             [
                 ("Dates and Nut Energy Bar", "Whole Food", "A", 8.4),
                 ("No Added Sugar Fruit Bar", "Fruit First", "B", 7.6),
@@ -434,21 +445,37 @@ def get_fallback_alternatives(category_query, product_context=''):
         )
     ]
 
-    selected = [
-        ("Organic Whole Food Alternative", "Barcodeify Picks", "A", 8.5),
-        ("Low Sugar Better Choice", "Barcodeify Picks", "B", 7.8),
-        ("High Fiber Everyday Option", "Barcodeify Picks", "B", 7.2)
-    ]
-
+    # Pick the most specific group that matches the context.
+    selected = None
     for keywords, items in fallback_groups:
         if context_contains(context_text, keywords):
             selected = items
             break
 
-    enriched = []
-    for name, brand, grade, score in selected:
+    # If nothing matched, fall back to category-only defaults.
+    if selected is None:
+        selected = [
+            ("Organic Whole Food Alternative", "Barcodeify Picks", "A", 8.5),
+            ("Low Sugar Better Choice", "Barcodeify Picks", "B", 7.8),
+            ("High Fiber Everyday Option", "Barcodeify Picks", "B", 7.2)
+        ]
+
+    # Apply a small personalization tweak based on scanned ingredients.
+    # (Changes health_score ordering / summary, while still keeping fallback brands.)
+    personalized = []
+    ingredients_lower = (product_context or '').lower()
+    prefers_protein = any(k in ingredients_lower for k in ['protein', 'whey', 'soy', 'paneer', 'curd', 'greek yogurt'])
+    contains_sugar = any(k in ingredients_lower for k in ['sugar', 'glucose', 'dextrose', 'syrup', 'honey', 'molasses'])
+
+    for idx, (name, brand, grade, score) in enumerate(selected):
+        score_adj = score
+        if prefers_protein and any(k in name.lower() for k in ['yogurt', 'protein']):
+            score_adj = min(10, score + 0.6)
+        if contains_sugar and any(k in name.lower() for k in ['unsweetened', 'no added sugar']):
+            score_adj = min(10, score + 0.7)
+
         ingredients = get_fallback_ingredients(name, category_query)
-        enriched.append({
+        personalized.append({
             "barcode": "",
             "name": name,
             "brand": brand,
@@ -458,12 +485,13 @@ def get_fallback_alternatives(category_query, product_context=''):
             "ingredients": ingredients,
             "nutrients": get_fallback_nutrients(name, category_query),
             "nutrition_grade": grade,
-            "health_score": score,
-            "status": analyzer.get_status(score),
-            "summary": get_alternative_summary(score, ingredients)
+            "health_score": score_adj,
+            "status": analyzer.get_status(score_adj),
+            "summary": get_alternative_summary(score_adj, ingredients)
         })
 
-    return enriched
+    return personalized
+
 
 def merge_with_fallbacks(alternatives, category_query, product_context='', limit=8):
     """Top up weak live search results with category-aware better picks."""
@@ -547,7 +575,20 @@ def get_product(barcode):
         }
         
         # Save to Firebase
-        save_scan_history(barcode, product_info['name'], health_score, status)
+        save_scan_history(
+            barcode,
+            product_info['name'],
+            health_score,
+            status,
+            product_payload={
+                'brand': product_info.get('brand'),
+                'category': product_info.get('category'),
+                'image': product_info.get('image'),
+                'nutrition_grade': product_info.get('nutrition_grade'),
+                'ingredients': product_info.get('ingredients'),
+            }
+        )
+
         
         return jsonify({
             "success": True,
@@ -584,12 +625,18 @@ def get_history():
             data = scan.to_dict()
             history.append({
                 "id": scan.id,
-                "barcode": data['barcode'],
-                "name": data['name'],
-                "score": data['score'],
-                "status": data['status'],
+                "barcode": data.get('barcode'),
+                "name": data.get('name'),
+                "brand": data.get('brand'),
+                "category": data.get('category'),
+                "image": data.get('image'),
+                "nutrition_grade": data.get('nutrition_grade'),
+                "ingredients": data.get('ingredients'),
+                "score": data.get('score'),
+                "status": data.get('status'),
                 "timestamp": data['timestamp']
             })
+
         
         return jsonify({"history": history})
         
@@ -597,21 +644,98 @@ def get_history():
         print(f"History error: {str(e)}")
         return jsonify({"history": []})
 
-def save_scan_history(barcode, name, score, status):
-    """Save scan to Firebase Firestore"""
+def save_scan_history(barcode, name, score, status, product_payload=None):
+    """Save scan to Firebase Firestore.
+
+    product_payload can include extra fields for showing recently scanned items.
+    """
     try:
-        db.collection('scans').add({
+        payload = {
             'barcode': barcode,
             'name': name,
             'score': score,
             'status': status,
-            'timestamp': firestore.SERVER_TIMESTAMP
-        })
+            'timestamp': firestore.SERVER_TIMESTAMP,
+        }
+
+        if isinstance(product_payload, dict):
+            payload.update({
+                'brand': product_payload.get('brand'),
+                'category': product_payload.get('category'),
+                'image': product_payload.get('image'),
+                'nutrition_grade': product_payload.get('nutrition_grade'),
+                'ingredients': product_payload.get('ingredients'),
+            })
+
+        db.collection('scans').add(payload)
     except Exception as e:
         print(f"Failed to save history: {str(e)}")
 
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """Chatbot endpoint implementing the requested algorithm.
+
+    Input JSON:
+      {"message": "...", "context": {"product_payload": {...}, "analysis": {...}}}
+
+    Context is optional; without it we fallback to a generic prompt.
+    """
+
+    try:
+        payload = request.get_json(force=True) or {}
+        user_message = payload.get('message', '')
+        context = payload.get('context') or {}
+
+        # Build a safe prompt (server-side)
+        product_payload = context.get('product_payload') if isinstance(context, dict) else None
+        analysis = context.get('analysis') if isinstance(context, dict) else None
+
+        system_hint = (
+            "You are Barcodeify+ nutrition assistant. "
+            "Respond in simplified English. "
+            "If product context is provided, use it. "
+            "Keep answers concise but helpful."
+        )
+
+        # Decide cloud vs local
+        hf_key = os.environ.get('VITE_HF_API_KEY')  # provided for local dev
+
+        def build_cloud_prompt() -> str:
+            parts = [system_hint]
+            if isinstance(product_payload, dict):
+                parts.append(f"Product: {product_payload}")
+            if isinstance(analysis, dict):
+                parts.append(f"Analysis: {analysis}")
+            parts.append(f"User message: {user_message}")
+            return "\n\n".join(parts)
+
+        # Algorithm: if key exists -> try cloud with timeout; else -> local engine
+        if hf_key:
+            prompt = build_cloud_prompt()
+            try:
+                # llama3_cloud_chat already uses ~8s timeout_s by default
+                response_text = llama3_cloud_chat(prompt, hf_key, timeout_s=8)
+                if response_text:
+                    return jsonify({"success": True, "reply": response_text})
+            except Exception:
+                # fall through to local engine
+                pass
+
+        reply = get_local_response(user_message, {
+            "product_payload": product_payload,
+            "analysis": analysis
+        })
+        return jsonify({"success": True, "reply": reply})
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e), "reply": "Sorry, something went wrong."}), 500
+
+
 @app.route('/alternatives/<category>/<exclude_barcode>', methods=['GET'])
 def get_alternatives(category, exclude_barcode):
+
+
     """Find better products from the same or nearest available category."""
     try:
         scanned_product = fetch_openfoodfacts_product(exclude_barcode) if exclude_barcode else {}
